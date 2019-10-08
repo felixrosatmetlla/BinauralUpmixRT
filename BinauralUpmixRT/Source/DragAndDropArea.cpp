@@ -23,11 +23,20 @@ void DragAndDropArea::paint(Graphics& g)
 	g.drawFittedText(message, getLocalBounds().reduced(10, 0), Justification::centred, 4);
 }
 
-bool DragAndDropArea::isInterestedInFileDrag(const StringArray& /*files*/)
+bool DragAndDropArea::isInterestedInFileDrag(const StringArray& files)
 {
-	// normally you'd check these files to see if they're something that you're
-	// interested in before returning true, but for the demo, we'll say yes to anything..
-	return true;
+	File file = File(files[0]);
+
+	juce::String extension = file.getFileExtension();
+
+	if (extension.compareIgnoreCase(juce::String(".wav")) == 0 || extension.compareIgnoreCase(juce::String(".mp3")) == 0 || extension.compareIgnoreCase(juce::String(".sofa")) == 0)
+	{
+		return true;
+	}
+	else {
+		return false;
+	}
+	
 }
 
 void DragAndDropArea::fileDragEnter(const StringArray& /*files*/, int /*x*/, int /*y*/)
@@ -49,6 +58,8 @@ void DragAndDropArea::fileDragExit(const StringArray& /*files*/)
 void DragAndDropArea::filesDropped(const StringArray& files, int /*x*/, int /*y*/)
 {
 	message = "Files dropped: " + files.joinIntoString("\n");
+
+	File file = File(files[0]);
 
 	somethingIsBeingDraggedOver = false;
 	repaint();
