@@ -59,8 +59,19 @@ void DragAndDropArea::filesDropped(const StringArray& files, int /*x*/, int /*y*
 {
 	message = "Files dropped: " + files.joinIntoString("\n");
 
-	File file = File(files[0]);
+	filesReaded = DragAndDropArea::filesToRead(files);
 
 	somethingIsBeingDraggedOver = false;
 	repaint();
+}
+
+Array<File> DragAndDropArea::filesToRead(const StringArray& files)
+{
+	Array<File> filesToProcess;
+
+	for (int i = 0; i < files.size(); i++) {
+		filesToProcess[i] = File(files[i]);
+	}
+	
+	return filesToProcess;
 }

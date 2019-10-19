@@ -16,7 +16,9 @@
     This component lives inside our window, and this is where you should put all
     your controls and content.
 */
-class MainComponent   : public AudioAppComponent
+class MainComponent   : public AudioAppComponent,
+						public ChangeListener,
+						public Timer
 {
 public:
     //==============================================================================
@@ -32,11 +34,46 @@ public:
     void paint (Graphics& g) override;
     void resized() override;
 
+	//==============================================================================
+	void changeListenerCallback(ChangeBroadcaster* source) override;
+	void timerCallback() override;
+	void updateLoopState(bool shouldLoop);
+
 private:
+	//==============================================================================
+	enum TransportState
+	{
+		Stopped,
+		Starting,
+		Playing,
+		Paused,
+		Pausing,
+		Stopping
+	};
+
+	//==============================================================================
+	void changeState(TransportState newState);
+	void openButtonClicked();
+	void playButtonClicked();
+	void stopButtonClicked();
+	void loopButtonChanged();
+
     //==============================================================================
-    // Your private member variables go here...
-	
+
+	AudioFormatManager formatManager;
+	std::unique_ptr<AudioFormatReaderSource> readerSource;
+	AudioTransportSource transportSource;
+	TransportState state;
+
+	// UI --- Still to determine
+	TextButton openButton;
+	TextButton playButton;
+	TextButton stopButton;
+	ToggleButton loopingToggle;
+	Label currentPositionLabel;
+
 	DragAndDropArea dropArea;
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

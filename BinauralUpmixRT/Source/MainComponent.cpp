@@ -9,7 +9,7 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent():dropArea("Drop and AudioFile or a SOFA file")
+MainComponent::MainComponent():state(Stopped), dropArea("Drop and AudioFile or a SOFA file")
 {
     // Make sure you set the size of the component after
     // you add any child components.
@@ -29,6 +29,34 @@ MainComponent::MainComponent():dropArea("Drop and AudioFile or a SOFA file")
     }
 
 	addAndMakeVisible(dropArea);
+
+	addAndMakeVisible(&openButton);
+	openButton.setButtonText("Open...");
+	openButton.onClick = [this] { openButtonClicked(); };
+
+	addAndMakeVisible(&playButton);
+	playButton.setButtonText("Play");
+	playButton.onClick = [this] { playButtonClicked(); };
+	playButton.setColour(TextButton::buttonColourId, Colours::green);
+	playButton.setEnabled(false);
+
+	addAndMakeVisible(&stopButton);
+	stopButton.setButtonText("Stop");
+	stopButton.onClick = [this] { stopButtonClicked(); };
+	stopButton.setColour(TextButton::buttonColourId, Colours::red);
+	stopButton.setEnabled(false);
+
+	addAndMakeVisible(&loopingToggle);
+	loopingToggle.setButtonText("Loop");
+	loopingToggle.onClick = [this] { loopButtonChanged(); };
+
+	addAndMakeVisible(&currentPositionLabel);
+	currentPositionLabel.setText("Stopped", dontSendNotification);
+
+	formatManager.registerBasicFormats();
+	transportSource.addChangeListener(this);
+
+	startTimer(20);
 }
 
 MainComponent::~MainComponent()
@@ -40,24 +68,27 @@ MainComponent::~MainComponent()
 //==============================================================================
 void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-    // This function will be called when the audio device is started, or when
+	
+	// This function will be called when the audio device is started, or when
     // its settings (i.e. sample rate, block size, etc) are changed.
 
-    // You can use this function to initialise any resources you might need,
-    // but be careful - it will be called on the audio thread, not the GUI thread.
-
-    // For more details, see the help for AudioProcessor::prepareToPlay()
+	transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
 void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
     // Your audio-processing code goes here!
-
     // For more details, see the help for AudioProcessor::getNextAudioBlock()
+	
+	if (readerSource.get() == nullptr) {
+		bufferToFill.clearActiveBufferRegion();
+		return;
+	}
 
-    // Right now we are not producing any data, in which case we need to clear the buffer
+	transportSource.getNextAudioBlock(bufferToFill);
+
     // (to prevent the output of random noise)
-    bufferToFill.clearActiveBufferRegion();
+    //bufferToFill.clearActiveBufferRegion();
 }
 
 void MainComponent::releaseResources()
@@ -65,7 +96,7 @@ void MainComponent::releaseResources()
     // This will be called when the audio device stops, or when it is being
     // restarted due to a setting change.
 
-    // For more details, see the help for AudioProcessor::releaseResources()
+	transportSource.releaseResources();
 }
 
 //==============================================================================
@@ -79,10 +110,104 @@ void MainComponent::paint (Graphics& g)
 
 void MainComponent::resized()
 {
+	// This is called when the MainContentComponent is resized.
+	
 	auto r = getLocalBounds().reduced(8);
 
 	dropArea.setBounds(r.removeFromBottom(150).removeFromRight(250));
-	// This is called when the MainContentComponent is resized.
-    // If you add any child components, this is where you should
-    // update their positions.
+
+	openButton.setBounds(10, 10, getWidth() - 20, 20);
+	playButton.setBounds(10, 40, getWidth() - 20, 20);
+	stopButton.setBounds(10, 70, getWidth() - 20, 20);
+	loopingToggle.setBounds(10, 100, getWidth() - 20, 20);
+	currentPositionLabel.setBounds(10, 130, getWidth() - 20, 20);
+}
+
+//==============================================================================
+//When changes in the transport are reported, this function will be called 
+//This will be called asynchronously on the message thread
+void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
+{
+	if (source == &transportSource)
+	{
+		if (transportSource.isPlaying()) {
+			changeState(Playing);
+		}
+		else if((state == Stopping) || (state == Playing)) {
+			changeState(Stopped);
+		}
+		else if ((state == Pausing)) {
+			changeState(Paused);
+		}
+	}
+}
+
+//==============================================================================
+void MainComponent::changeState(TransportState newState)
+{
+	if (state != newState) 
+	{
+		state = newState;
+
+		switch (state) 
+		{
+			case Stopped:
+				stopButton.setEnabled(false);
+				playButton.setButtonText("Play");
+				transportSource.setPosition(0.0);
+				break;
+
+			case Starting:
+				transportSource.start();
+				break;
+
+			case Playing:
+				playButton.setButtonText("Pause");
+				stopButton.setEnabled(true);
+				break;
+
+			case Pausing:
+				transportSource.stop();
+				break;
+
+			case Paused:
+				playButton.setButtonText("Play");
+				break;
+
+			case Stopping:
+				transportSource.stop();
+				break;
+
+		}
+	}
+}
+
+void MainComponent::openButtonClicked()
+{
+	
+}
+
+void MainComponent::playButtonClicked()
+{
+	if ((state == Stopped) || (state == Paused)) {
+		changeState(Starting);
+	}
+	else if ((state == Playing)) {
+		changeState(Pausing);
+	}
+}
+
+void MainComponent::stopButtonClicked()
+{
+	if (state == Paused) {
+		changeState(Stopped);
+	}
+	else {
+		changeState(Stopping);
+	}
+}
+
+void MainComponent::loopButtonChanged()
+{
+
 }

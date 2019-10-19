@@ -20,9 +20,11 @@ public:
 
 	void filesDropped(const StringArray& files, int /*x*/, int /*y*/) override;
 
+	Array<File> filesToRead(const StringArray& files);
+
+	Array<File> filesReaded;
 
 private:
 	String message;
 
-	bool somethingIsBeingDraggedOver;
-};
+	bool somethingIsBeingDraggedOver;};
