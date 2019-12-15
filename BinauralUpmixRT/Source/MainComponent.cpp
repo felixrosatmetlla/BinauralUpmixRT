@@ -142,6 +142,31 @@ void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
 	}
 }
 
+void MainComponent::timerCallback()
+{
+	if (transportSource.isPlaying())
+	{
+		RelativeTime position(transportSource.getCurrentPosition());
+
+		int minutes = ((int)position.inMinutes()) % 60;
+		int seconds = ((int)position.inSeconds()) % 60;
+		int millis = ((int)position.inMilliseconds()) % 1000;
+
+		juce::String positionString = String::formatted("%02d:%02d:%03d", minutes, seconds, millis);
+
+		currentPositionLabel.setText(positionString, dontSendNotification);
+	}
+	else
+	{
+		currentPositionLabel.setText("Stopped", dontSendNotification);
+	}
+}
+
+void MainComponent::updateLoopState(bool shouldLoop)
+{
+	if (readerSource.get() != nullptr) readerSource->setLooping(shouldLoop);
+}
+
 //==============================================================================
 void MainComponent::changeState(TransportState newState)
 {
@@ -184,12 +209,29 @@ void MainComponent::changeState(TransportState newState)
 
 void MainComponent::openButtonClicked()
 {
-	
+	FileChooser chooser("Select a Wave file to play...",
+		File::getSpecialLocation(File::userHomeDirectory),"*.wav");
+
+	if (chooser.browseForFileToOpen()) 
+	{
+		File file = chooser.getResult();
+
+		AudioFormatReader* reader = formatManager.createReaderFor(file);
+
+		if (reader != nullptr)
+		{
+			std::unique_ptr<AudioFormatReaderSource> newSource (new AudioFormatReaderSource(reader, true));
+			transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);
+			playButton.setEnabled(true);
+			readerSource.reset(newSource.release());
+		}
+	}
 }
 
 void MainComponent::playButtonClicked()
 {
 	if ((state == Stopped) || (state == Paused)) {
+		
 		changeState(Starting);
 	}
 	else if ((state == Playing)) {
@@ -209,5 +251,5 @@ void MainComponent::stopButtonClicked()
 
 void MainComponent::loopButtonChanged()
 {
-
+	updateLoopState(loopingToggle.getToggleState());
 }
