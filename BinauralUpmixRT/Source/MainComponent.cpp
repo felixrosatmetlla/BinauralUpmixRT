@@ -9,7 +9,7 @@
 #include "MainComponent.h"
 
 //==============================================================================
-MainComponent::MainComponent():state(Stopped), dropArea("Drop and AudioFile or a SOFA file")
+MainComponent::MainComponent():state(Stopped), forwardFFT(8), dropArea("Drop and AudioFile or a SOFA file")
 {
     // Make sure you set the size of the component after
     // you add any child components.
@@ -68,10 +68,27 @@ MainComponent::~MainComponent()
 //==============================================================================
 void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-	
 	// This function will be called when the audio device is started, or when
     // its settings (i.e. sample rate, block size, etc) are changed.
 
+	// Memory Allocation
+	fftBuffer = (float**)calloc(N_CH, sizeof(float*));
+	for (int i = 0; i < N_CH; i++) {
+		if (fftBuffer != NULL)
+		{
+			fftBuffer[i] = (float*)calloc(forwardFFT.getSize() * 2.0, sizeof(float));
+		}
+	}
+
+	complexFFTBuffer = (std::complex<float> * *)calloc(N_CH, sizeof(std::complex<float>*));
+	for (int i = 0; i < N_CH; i++) {
+		if (complexFFTBuffer != NULL)
+		{
+			complexFFTBuffer[i] = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+		}
+	}
+
+	// Transport Source setup
 	transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
@@ -85,6 +102,17 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
 		return;
 	}
 
+	// --- Audio Processing ---
+	
+	// To Frequency domain
+	for (int ch = 0; ch < N_CH; ch++) {
+		forwardFFT.performRealOnlyForwardTransform(fftBuffer[ch], true);
+	}
+
+	getComplexFFTBuffer(fftBuffer, forwardFFT.getSize() + 1.0);
+
+
+	// Pass next audio block to the transport source to play
 	transportSource.getNextAudioBlock(bufferToFill);
 
     // (to prevent the output of random noise)
@@ -95,6 +123,17 @@ void MainComponent::releaseResources()
 {
     // This will be called when the audio device stops, or when it is being
     // restarted due to a setting change.
+
+	// Memory Allocation Release
+	for (int ch = 0; ch < N_CH; ch++) {
+		free(fftBuffer[ch]);
+	}
+	free(fftBuffer);
+
+	for (int ch = 0; ch < N_CH - 1; ch++) {
+		free(complexFFTBuffer[ch]);
+	}
+	free(complexFFTBuffer);
 
 	transportSource.releaseResources();
 }
@@ -252,4 +291,20 @@ void MainComponent::stopButtonClicked()
 void MainComponent::loopButtonChanged()
 {
 	updateLoopState(loopingToggle.getToggleState());
+}
+
+//==============================================================================
+void MainComponent::getComplexFFTBuffer(float** fftBuffer, size_t fftSize)
+{
+	for (int channel = 0; channel < N_CH; channel++) {
+		for (int sample = 0, fftsample = 0; sample < fftSize; sample++, fftsample += 2) {
+			complexFFTBuffer[channel][sample].real(fftBuffer[channel][fftsample]);
+			complexFFTBuffer[channel][sample].imag(fftBuffer[channel][fftsample + 1]);
+			//std::cout << "complex: " << complexFFTBuffer[channel][sample] << std::endl;
+		}
+	}
+}
+
+void MainComponent::channelAutoCorrelation(std::complex<float>** complexFFTBuffer, float FF)
+{
 }

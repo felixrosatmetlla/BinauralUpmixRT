@@ -11,6 +11,9 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "DragAndDropArea.h"
 
+// Constants
+#define N_CH 2
+
 //==============================================================================
 /*
     This component lives inside our window, and this is where you should put all
@@ -39,6 +42,12 @@ public:
 	void timerCallback() override;
 	void updateLoopState(bool shouldLoop);
 
+	//==============================================================================
+	void getComplexFFTBuffer(float** fftBuffer, size_t fftSize);
+
+	void channelAutoCorrelation(std::complex<float>** complexFFTBuffer, float FF);
+	//void audioCrossCorrelation(std::complex<float>** rightFFTBuffer, std::complex<float>** leftFFTBuffer, float FF);
+
 private:
 	//==============================================================================
 	enum TransportState
@@ -64,6 +73,11 @@ private:
 	std::unique_ptr<AudioFormatReaderSource> readerSource;
 	AudioTransportSource transportSource;
 	TransportState state;
+
+	// STFT variables
+	dsp::FFT forwardFFT;
+	float** fftBuffer;
+	std::complex<float>** complexFFTBuffer;
 
 	// UI --- Still to determine
 	TextButton openButton;
