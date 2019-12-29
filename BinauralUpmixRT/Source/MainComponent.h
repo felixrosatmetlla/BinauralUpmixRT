@@ -45,8 +45,8 @@ public:
 	//==============================================================================
 	void getComplexFFTBuffer(float** fftBuffer, size_t fftSize);
 
-	void channelAutoCorrelation(std::complex<float>** complexFFTBuffer, float FF);
-	//void audioCrossCorrelation(std::complex<float>** rightFFTBuffer, std::complex<float>** leftFFTBuffer, float FF);
+	void channelAutoCorrelation(std::complex<float>* channelFFT, float* autoCorrelationChannel, float FF, int bufferSize);
+	void audioCrossCorrelation(std::complex<float>* rightFFTBuffer, std::complex<float>* leftFFTBuffer, float FF, int bufferSize);
 
 private:
 	//==============================================================================
@@ -77,7 +77,18 @@ private:
 	// STFT variables
 	dsp::FFT forwardFFT;
 	float** fftBuffer;
+	
 	std::complex<float>** complexFFTBuffer;
+	std::complex<float>* rightFFTChannel;
+	std::complex<float>* leftFFTChannel;
+
+	// Correlation variables
+	float* rightAutoCorrelation;
+	float* leftAutoCorrelation;
+
+	std::complex<float>* crossCorrelationLR;
+	std::complex<float>* crossCorrelationCoefficient;
+
 
 	// UI --- Still to determine
 	TextButton openButton;

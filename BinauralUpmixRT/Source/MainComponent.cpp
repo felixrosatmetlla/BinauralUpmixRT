@@ -80,13 +80,19 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 		}
 	}
 
-	complexFFTBuffer = (std::complex<float> * *)calloc(N_CH, sizeof(std::complex<float>*));
+	complexFFTBuffer = (std::complex<float>**)calloc(N_CH, sizeof(std::complex<float>*));
 	for (int i = 0; i < N_CH; i++) {
 		if (complexFFTBuffer != NULL)
 		{
 			complexFFTBuffer[i] = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 		}
 	}
+
+	rightFFTChannel = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+	leftFFTChannel = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+
+	rightAutoCorrelation = (float*)calloc(forwardFFT.getSize(), sizeof(float));
+	leftAutoCorrelation = (float*)calloc(forwardFFT.getSize(), sizeof(float));
 
 	// Transport Source setup
 	transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -105,11 +111,31 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
 	// --- Audio Processing ---
 	
 	// To Frequency domain
-	for (int ch = 0; ch < N_CH; ch++) {
+	for (int ch = 0; ch < N_CH; ch++) 
+	{
 		forwardFFT.performRealOnlyForwardTransform(fftBuffer[ch], true);
 	}
 
 	getComplexFFTBuffer(fftBuffer, forwardFFT.getSize() + 1.0);
+
+	// Separate the channels into different variables
+	for (int channel = 0; channel < N_CH; channel++)
+	{
+		for (int sample = 0; sample < forwardFFT.getSize(); sample++)
+		{
+			if (channel == 0)
+			{
+				leftFFTChannel[sample] = complexFFTBuffer[channel][sample];
+			}
+			else if (channel == 1)
+			{
+				rightFFTChannel[sample] = complexFFTBuffer[channel][sample];
+			}
+		}
+	}
+
+	channelAutoCorrelation(leftFFTChannel, leftAutoCorrelation, 0.7, forwardFFT.getSize());
+	channelAutoCorrelation(rightFFTChannel, rightAutoCorrelation, 0.7, forwardFFT.getSize());
 
 
 	// Pass next audio block to the transport source to play
@@ -134,6 +160,12 @@ void MainComponent::releaseResources()
 		free(complexFFTBuffer[ch]);
 	}
 	free(complexFFTBuffer);
+
+	free(rightFFTChannel);
+	free(leftFFTChannel);
+
+	free(rightAutoCorrelation);
+	free(leftAutoCorrelation);
 
 	transportSource.releaseResources();
 }
@@ -296,8 +328,10 @@ void MainComponent::loopButtonChanged()
 //==============================================================================
 void MainComponent::getComplexFFTBuffer(float** fftBuffer, size_t fftSize)
 {
-	for (int channel = 0; channel < N_CH; channel++) {
-		for (int sample = 0, fftsample = 0; sample < fftSize; sample++, fftsample += 2) {
+	for (int channel = 0; channel < N_CH; channel++) 
+	{
+		for (int sample = 0, fftsample = 0; sample < fftSize; sample++, fftsample += 2) 
+		{
 			complexFFTBuffer[channel][sample].real(fftBuffer[channel][fftsample]);
 			complexFFTBuffer[channel][sample].imag(fftBuffer[channel][fftsample + 1]);
 			//std::cout << "complex: " << complexFFTBuffer[channel][sample] << std::endl;
@@ -305,6 +339,54 @@ void MainComponent::getComplexFFTBuffer(float** fftBuffer, size_t fftSize)
 	}
 }
 
-void MainComponent::channelAutoCorrelation(std::complex<float>** complexFFTBuffer, float FF)
+//TODO: Check autocorrelation output values
+//TODO: Check if complex needed or float is okay
+void MainComponent::channelAutoCorrelation(std::complex<float>* channelFFT, float* autoCorrelationChannel,float FF, int bufferSize)
 {
+	for (int sample = 0; sample < bufferSize; sample++)
+	{
+		if (sample == 0) 
+		{
+			autoCorrelationChannel[sample] = pow(abs(channelFFT[sample]), 2);
+
+			float lastAutoCorrelation = 0;
+			float actualAutoCorrelation = (1 - FF) * autoCorrelationChannel[sample];
+
+			autoCorrelationChannel[sample] = lastAutoCorrelation + actualAutoCorrelation;
+		}
+		else
+		{
+			autoCorrelationChannel[sample] = pow(abs(channelFFT[sample]), 2);
+
+			float lastAutoCorrelation = FF * autoCorrelationChannel[sample - 1];
+			float actualAutoCorrelation = (1 - FF) * autoCorrelationChannel[sample];
+
+			autoCorrelationChannel[sample] = lastAutoCorrelation + actualAutoCorrelation;
+		}
+	}
+}
+
+void MainComponent::audioCrossCorrelation(std::complex<float>* rightFFTBuffer, std::complex<float>* leftFFTBuffer, float FF, int bufferSize)
+{
+	for (int sample = 0; sample < bufferSize; sample++)
+	{
+		if (sample == 0)
+		{
+			crossCorrelationLR[sample] = leftFFTBuffer[sample] * std::conj(rightFFTBuffer[sample]);
+
+			std::complex<float> lastCrossCorrelation = 0;
+			std::complex<float> actualCrossCorrelation = (1 - FF) * crossCorrelationLR[sample];
+
+			crossCorrelationLR[sample] = lastCrossCorrelation + actualCrossCorrelation;
+		}
+		else
+		{
+			crossCorrelationLR[sample] = leftFFTBuffer[sample] * std::conj(rightFFTBuffer[sample]);
+
+			std::complex<float> lastCrossCorrelation = FF * crossCorrelationLR[sample - 1];
+			std::complex<float> actualCrossCorrelation = (1 - FF) * crossCorrelationLR[sample];
+
+			crossCorrelationLR[sample] = lastCrossCorrelation + actualCrossCorrelation;
+		}
+	}
 }
