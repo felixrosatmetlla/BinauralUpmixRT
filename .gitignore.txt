@@ -31,8 +31,7 @@
 *.a
 *.lib
 
-**/bin/Debug/
-**/bin/Release/
+BinauralUpmixRT/Builds
 
 # Executables
 *.exe
