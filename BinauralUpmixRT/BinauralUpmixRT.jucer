@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="tU9EtB" name="BinauralUpmixRT" projectType="guiapp" jucerVersion="5.4.4">
+<JUCERPROJECT id="tU9EtB" name="BinauralUpmixRT" projectType="guiapp" jucerVersion="5.4.7">
   <MAINGROUP id="teDe6T" name="BinauralUpmixRT">
     <GROUP id="{7A029BED-3C6F-23C7-227B-09FAF046E7F6}" name="Source">
+      <FILE id="zLSwDx" name="EqualAmbienceRatios.cpp" compile="1" resource="0"
+            file="Source/EqualAmbienceRatios.cpp"/>
+      <FILE id="VTwl7S" name="EqualAmbienceRatios.h" compile="0" resource="0"
+            file="Source/EqualAmbienceRatios.h"/>
       <FILE id="HNpcxb" name="DragAndDropArea.cpp" compile="1" resource="0"
             file="Source/DragAndDropArea.cpp"/>
       <FILE id="hNGIoM" name="DragAndDropArea.h" compile="0" resource="0"
