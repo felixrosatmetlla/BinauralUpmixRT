@@ -9,6 +9,8 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
+
+#include "EqualAmbienceRatios.h"
 #include "DragAndDropArea.h"
 
 // Constants
@@ -91,6 +93,11 @@ private:
 	std::complex<float>* crossCorrelationLR;
 	std::complex<float>* crossCorrelationCoefficient;
 
+	std::complex<float>* ambienceLeft;
+	std::complex<float>* directLeft;
+	
+	std::complex<float>* ambienceRight;
+	std::complex<float>* directRight;
 
 	// UI --- Still to determine
 	TextButton openButton;

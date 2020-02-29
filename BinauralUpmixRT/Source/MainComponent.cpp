@@ -97,6 +97,12 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 	crossCorrelationLR = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 	crossCorrelationCoefficient = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 
+	ambienceLeft = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+	directLeft = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+
+	ambienceRight = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+	directRight = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+
 	// Transport Source setup
 	transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
@@ -140,6 +146,13 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
 	channelAutoCorrelation(leftFFTChannel, leftAutoCorrelation, 0.7, forwardFFT.getSize());
 	channelAutoCorrelation(rightFFTChannel, rightAutoCorrelation, 0.7, forwardFFT.getSize());
 
+	audioCrossCorrelation(rightFFTChannel, leftFFTChannel);
+	computeCrossCorrelationCoefficient(crossCorrelationLR, leftAutoCorrelation, rightAutoCorrelation, forwardFFT.getSize());
+
+	EqualAmbienceRatios::AmbienceSignal(leftFFTChannel, crossCorrelationCoefficient, ambienceLeft, forwardFFT.getSize());
+	EqualAmbienceRatios::DirectSignal(leftFFTChannel, crossCorrelationCoefficient, directLeft, forwardFFT.getSize());
+	EqualAmbienceRatios::AmbienceSignal(rightFFTChannel, crossCorrelationCoefficient, ambienceRight, forwardFFT.getSize());
+	EqualAmbienceRatios::AmbienceSignal(rightFFTChannel, crossCorrelationCoefficient, directRight, forwardFFT.getSize());
 
 	// Pass next audio block to the transport source to play
 	transportSource.getNextAudioBlock(bufferToFill);
@@ -169,6 +182,14 @@ void MainComponent::releaseResources()
 
 	free(rightAutoCorrelation);
 	free(leftAutoCorrelation);
+
+	free(crossCorrelationLR);
+	free(crossCorrelationCoefficient);
+
+	free(ambienceLeft);
+	free(directLeft);
+	free(ambienceRight);
+	free(directRight);
 
 	transportSource.releaseResources();
 }

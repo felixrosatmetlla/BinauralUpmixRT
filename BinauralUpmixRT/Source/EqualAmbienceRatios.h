@@ -14,5 +14,10 @@
 class EqualAmbienceRatios
 {
 public:
-	static float* AlphaCommonMask(std::complex<float>* crossCorrelationCoefficient, float* alphaCommonMask, int bufferSize);
+	static void AmbienceSignal(std::complex<float>* signal, std::complex<float>* crossCorrelationCoefficient, std::complex<float>* ambienceSignal, int bufferSize);
+
+	static void DirectSignal(std::complex<float>* signal, std::complex<float>* crossCorrelationCoefficient, std::complex<float>* directSignal, int bufferSize);
+
+private:
+	static void AlphaCommonMask(std::complex<float>* crossCorrelationCoefficient, float* alphaCommonMask, int bufferSize);
 };
