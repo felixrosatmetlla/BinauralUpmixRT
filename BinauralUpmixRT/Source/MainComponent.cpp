@@ -91,8 +91,11 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 	rightFFTChannel = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 	leftFFTChannel = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 
-	rightAutoCorrelation = (float*)calloc(forwardFFT.getSize(), sizeof(float));
-	leftAutoCorrelation = (float*)calloc(forwardFFT.getSize(), sizeof(float));
+	rightAutoCorrelation = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+	leftAutoCorrelation = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+
+	crossCorrelationLR = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
+	crossCorrelationCoefficient = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 
 	// Transport Source setup
 	transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -339,9 +342,7 @@ void MainComponent::getComplexFFTBuffer(float** fftBuffer, size_t fftSize)
 	}
 }
 
-//TODO: Check autocorrelation output values
-//TODO: Check if complex needed or float is okay
-void MainComponent::channelAutoCorrelation(std::complex<float>* channelFFT, float* autoCorrelationChannel,float FF, int bufferSize)
+void MainComponent::channelAutoCorrelation(std::complex<float>* channelFFT, std::complex<float>* autoCorrelationChannel,float FF, int bufferSize)
 {
 	for (int sample = 0; sample < bufferSize; sample++)
 	{
@@ -349,8 +350,8 @@ void MainComponent::channelAutoCorrelation(std::complex<float>* channelFFT, floa
 		{
 			autoCorrelationChannel[sample] = pow(abs(channelFFT[sample]), 2);
 
-			float lastAutoCorrelation = 0;
-			float actualAutoCorrelation = (1 - FF) * autoCorrelationChannel[sample];
+			std::complex<float> lastAutoCorrelation = 0;
+			std::complex<float> actualAutoCorrelation = (1 - FF) * autoCorrelationChannel[sample];
 
 			autoCorrelationChannel[sample] = lastAutoCorrelation + actualAutoCorrelation;
 		}
@@ -358,8 +359,8 @@ void MainComponent::channelAutoCorrelation(std::complex<float>* channelFFT, floa
 		{
 			autoCorrelationChannel[sample] = pow(abs(channelFFT[sample]), 2);
 
-			float lastAutoCorrelation = FF * autoCorrelationChannel[sample - 1];
-			float actualAutoCorrelation = (1 - FF) * autoCorrelationChannel[sample];
+			std::complex<float> lastAutoCorrelation = FF * autoCorrelationChannel[sample - 1];
+			std::complex<float> actualAutoCorrelation = (1 - FF) * autoCorrelationChannel[sample];
 
 			autoCorrelationChannel[sample] = lastAutoCorrelation + actualAutoCorrelation;
 		}
@@ -388,5 +389,13 @@ void MainComponent::audioCrossCorrelation(std::complex<float>* rightFFTBuffer, s
 
 			crossCorrelationLR[sample] = lastCrossCorrelation + actualCrossCorrelation;
 		}
+	}
+}
+
+void MainComponent::computeCrossCorrelationCoefficient(std::complex<float>* crossCorrelationChannel, std::complex<float>* leftAutoCorrelation, std::complex<float>* rightAutoCorrelation, int bufferSize)
+{
+	for (int i = 0; i < bufferSize; i++)
+	{
+		crossCorrelationCoefficient[i] = crossCorrelationChannel[i] / std::sqrt(leftAutoCorrelation[i] * rightAutoCorrelation[i]);
 	}
 }

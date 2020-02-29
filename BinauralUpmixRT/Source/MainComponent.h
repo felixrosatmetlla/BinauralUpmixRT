@@ -45,8 +45,10 @@ public:
 	//==============================================================================
 	void getComplexFFTBuffer(float** fftBuffer, size_t fftSize);
 
-	void channelAutoCorrelation(std::complex<float>* channelFFT, float* autoCorrelationChannel, float FF, int bufferSize);
+	void channelAutoCorrelation(std::complex<float>* channelFFT, std::complex<float>* autoCorrelationChannel, float FF, int bufferSize);
 	void audioCrossCorrelation(std::complex<float>* rightFFTBuffer, std::complex<float>* leftFFTBuffer, float FF, int bufferSize);
+
+	void computeCrossCorrelationCoefficient(std::complex<float>* crossCorrelationChannel, std::complex<float>* leftAutoCorrelation, std::complex<float>* rightAutoCorrelation, int bufferSize);
 
 private:
 	//==============================================================================
@@ -83,8 +85,8 @@ private:
 	std::complex<float>* leftFFTChannel;
 
 	// Correlation variables
-	float* rightAutoCorrelation;
-	float* leftAutoCorrelation;
+	std::complex<float>* rightAutoCorrelation;
+	std::complex<float>* leftAutoCorrelation;
 
 	std::complex<float>* crossCorrelationLR;
 	std::complex<float>* crossCorrelationCoefficient;
