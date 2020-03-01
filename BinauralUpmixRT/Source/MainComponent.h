@@ -46,6 +46,8 @@ public:
 
 	//==============================================================================
 	void getComplexFFTBuffer(float** fftBuffer, size_t fftSize);
+	void getFloatFFTBuffer(std::complex<float>* fftComplexBuffer, float* floatFFTBuffer, int bufferSize);
+	void getSignalBuffer(float* inverseFFTBuffer, float* signalBuffer, int bufferSize);
 
 	void channelAutoCorrelation(std::complex<float>* channelFFT, std::complex<float>* autoCorrelationChannel, float FF, int bufferSize);
 	void audioCrossCorrelation(std::complex<float>* rightFFTBuffer, std::complex<float>* leftFFTBuffer, float FF, int bufferSize);
@@ -78,13 +80,22 @@ private:
 	AudioTransportSource transportSource;
 	TransportState state;
 
+	Random randNum;
+
 	// STFT variables
+	float** audioBuffer;
+
 	dsp::FFT forwardFFT;
 	float** fftBuffer;
 	
 	std::complex<float>** complexFFTBuffer;
 	std::complex<float>* rightFFTChannel;
 	std::complex<float>* leftFFTChannel;
+
+	float* ambienceLeftFFT;
+	float* directLeftFFT;
+	float* ambienceRightFFT;
+	float* directRightFFT;
 
 	// Correlation variables
 	std::complex<float>* rightAutoCorrelation;
@@ -99,7 +110,12 @@ private:
 	std::complex<float>* ambienceRight;
 	std::complex<float>* directRight;
 
-	// UI --- Still to determine
+	float* ambienceLeftSignal;
+	float* directLeftSignal;
+	float* ambienceRightSignal;
+	float* directRightSignal;
+
+	// UI --- Still povisional
 	TextButton openButton;
 	TextButton playButton;
 	TextButton stopButton;

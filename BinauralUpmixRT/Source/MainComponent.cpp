@@ -72,6 +72,14 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     // its settings (i.e. sample rate, block size, etc) are changed.
 
 	// Memory Allocation
+	audioBuffer = (float**)calloc(N_CH, sizeof(float*));
+	for (int i = 0; i < N_CH; i++) {
+		if (fftBuffer != NULL)
+		{
+			audioBuffer[i] = (float*)calloc(samplesPerBlockExpected, sizeof(float));
+		}
+	}
+
 	fftBuffer = (float**)calloc(N_CH, sizeof(float*));
 	for (int i = 0; i < N_CH; i++) {
 		if (fftBuffer != NULL)
@@ -103,6 +111,16 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 	ambienceRight = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 	directRight = (std::complex<float>*)calloc(forwardFFT.getSize(), sizeof(std::complex<float>));
 
+	ambienceLeftFFT = (float*)calloc(forwardFFT.getSize() * 2.0, sizeof(float));
+	directLeftFFT = (float*)calloc(forwardFFT.getSize() * 2.0, sizeof(float));
+	ambienceRightFFT = (float*)calloc(forwardFFT.getSize() * 2.0, sizeof(float));
+	directRightFFT = (float*)calloc(forwardFFT.getSize() * 2.0, sizeof(float));
+
+	ambienceLeftSignal = (float*)calloc(samplesPerBlockExpected, sizeof(float));
+	directLeftSignal = (float*)calloc(samplesPerBlockExpected, sizeof(float));
+	ambienceRightSignal = (float*)calloc(samplesPerBlockExpected, sizeof(float));
+	directRightSignal = (float*)calloc(samplesPerBlockExpected, sizeof(float));
+
 	// Transport Source setup
 	transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
@@ -118,7 +136,16 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
 	}
 
 	// --- Audio Processing ---
-	
+	for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ch++) {
+		for (int sample = 0; sample < bufferToFill.buffer->getNumSamples(); sample++) {
+			audioBuffer[ch][sample] = *bufferToFill.buffer->getWritePointer(ch, sample);
+
+			//audioBuffer[ch][sample] += (randNum.nextFloat() - 0.5) * 1e-100;
+		}
+
+		std::memcpy(fftBuffer[ch], audioBuffer[ch], sizeof(float) * bufferToFill.buffer->getNumSamples());
+	}
+
 	// To Frequency domain
 	for (int ch = 0; ch < N_CH; ch++) 
 	{
@@ -154,6 +181,22 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
 	EqualAmbienceRatios::AmbienceSignal(rightFFTChannel, crossCorrelationCoefficient, ambienceRight, forwardFFT.getSize());
 	EqualAmbienceRatios::AmbienceSignal(rightFFTChannel, crossCorrelationCoefficient, directRight, forwardFFT.getSize());
 
+	getFloatFFTBuffer(ambienceLeft, ambienceLeftFFT, forwardFFT.getSize());
+	getFloatFFTBuffer(directLeft, directLeftFFT, forwardFFT.getSize());
+	getFloatFFTBuffer(ambienceRight, ambienceRightFFT, forwardFFT.getSize());
+	getFloatFFTBuffer(directRight, directRightFFT, forwardFFT.getSize());
+
+	forwardFFT.performRealOnlyInverseTransform(ambienceLeftFFT);
+	forwardFFT.performRealOnlyInverseTransform(directLeftFFT);
+	forwardFFT.performRealOnlyInverseTransform(ambienceRightFFT);
+	forwardFFT.performRealOnlyInverseTransform(directRightFFT);
+
+	getSignalBuffer(ambienceLeftFFT, ambienceLeftSignal, bufferToFill.numSamples);
+	getSignalBuffer(directLeftFFT, directLeftSignal, bufferToFill.numSamples);
+	getSignalBuffer(ambienceRightFFT, ambienceRightSignal, bufferToFill.numSamples);
+	getSignalBuffer(directRightFFT, directRightSignal, bufferToFill.numSamples);
+
+
 	// Pass next audio block to the transport source to play
 	transportSource.getNextAudioBlock(bufferToFill);
 
@@ -168,6 +211,11 @@ void MainComponent::releaseResources()
 
 	// Memory Allocation Release
 	for (int ch = 0; ch < N_CH; ch++) {
+		free(audioBuffer[ch]);
+	}
+	free(audioBuffer);
+
+	for (int ch = 0; ch < N_CH; ch++) {
 		free(fftBuffer[ch]);
 	}
 	free(fftBuffer);
@@ -175,6 +223,7 @@ void MainComponent::releaseResources()
 	for (int ch = 0; ch < N_CH - 1; ch++) {
 		free(complexFFTBuffer[ch]);
 	}
+
 	free(complexFFTBuffer);
 
 	free(rightFFTChannel);
@@ -190,6 +239,16 @@ void MainComponent::releaseResources()
 	free(directLeft);
 	free(ambienceRight);
 	free(directRight);
+
+	free(ambienceLeftFFT);
+	free(directLeftFFT);
+	free(ambienceRightFFT);
+	free(directRightFFT);
+
+	free(ambienceLeftSignal);
+	free(directLeftSignal);
+	free(ambienceRightSignal);
+	free(directRightSignal);
 
 	transportSource.releaseResources();
 }
@@ -360,6 +419,23 @@ void MainComponent::getComplexFFTBuffer(float** fftBuffer, size_t fftSize)
 			complexFFTBuffer[channel][sample].imag(fftBuffer[channel][fftsample + 1]);
 			//std::cout << "complex: " << complexFFTBuffer[channel][sample] << std::endl;
 		}
+	}
+}
+
+void MainComponent::getFloatFFTBuffer(std::complex<float>* fftComplexBuffer, float* floatFFTBuffer, int bufferSize)
+{
+	for (int sample = 0, fftsample = 0; sample < bufferSize; sample++, fftsample += 2)
+	{
+		floatFFTBuffer[fftsample] = fftComplexBuffer[sample].real();
+		floatFFTBuffer[fftsample + 1] = fftComplexBuffer[sample].imag();
+	}
+}
+
+void getSignalBuffer(float* inverseFFTBuffer, float* signalBuffer, int bufferSize)
+{
+	for (int sample = 0; sample < bufferSize; sample++)
+	{
+		signalBuffer[sample] = inverseFFTBuffer[sample];
 	}
 }
 
