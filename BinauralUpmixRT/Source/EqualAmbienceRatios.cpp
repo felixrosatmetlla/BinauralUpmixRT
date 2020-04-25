@@ -42,6 +42,4 @@ void EqualAmbienceRatios::AlphaCommonMask(std::complex<float>* crossCorrelationC
 	{
 		alphaCommonMask[index] = sqrt(1 - abs(crossCorrelationCoefficient[index]));
 	}
-
-	return alphaCommonMask;
 }

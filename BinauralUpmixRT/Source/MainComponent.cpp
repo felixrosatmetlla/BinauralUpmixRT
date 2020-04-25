@@ -173,7 +173,7 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
 	channelAutoCorrelation(leftFFTChannel, leftAutoCorrelation, 0.7, forwardFFT.getSize());
 	channelAutoCorrelation(rightFFTChannel, rightAutoCorrelation, 0.7, forwardFFT.getSize());
 
-	audioCrossCorrelation(rightFFTChannel, leftFFTChannel);
+	audioCrossCorrelation(rightFFTChannel, leftFFTChannel, 0.7, forwardFFT.getSize());
 	computeCrossCorrelationCoefficient(crossCorrelationLR, leftAutoCorrelation, rightAutoCorrelation, forwardFFT.getSize());
 
 	EqualAmbienceRatios::AmbienceSignal(leftFFTChannel, crossCorrelationCoefficient, ambienceLeft, forwardFFT.getSize());
@@ -195,8 +195,7 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
 	getSignalBuffer(directLeftFFT, directLeftSignal, bufferToFill.numSamples);
 	getSignalBuffer(ambienceRightFFT, ambienceRightSignal, bufferToFill.numSamples);
 	getSignalBuffer(directRightFFT, directRightSignal, bufferToFill.numSamples);
-
-
+	
 	// Pass next audio block to the transport source to play
 	transportSource.getNextAudioBlock(bufferToFill);
 
@@ -290,7 +289,7 @@ void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
 		else if((state == Stopping) || (state == Playing)) {
 			changeState(Stopped);
 		}
-		else if ((state == Pausing)) {
+		else if (state == Pausing) {
 			changeState(Paused);
 		}
 	}
@@ -388,7 +387,7 @@ void MainComponent::playButtonClicked()
 		
 		changeState(Starting);
 	}
-	else if ((state == Playing)) {
+	else if (state == Playing) {
 		changeState(Pausing);
 	}
 }
