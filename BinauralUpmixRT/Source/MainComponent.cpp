@@ -430,7 +430,7 @@ void MainComponent::getFloatFFTBuffer(std::complex<float>* fftComplexBuffer, flo
 	}
 }
 
-void getSignalBuffer(float* inverseFFTBuffer, float* signalBuffer, int bufferSize)
+void MainComponent::getSignalBuffer(float* inverseFFTBuffer, float* signalBuffer, int bufferSize)
 {
 	for (int sample = 0; sample < bufferSize; sample++)
 	{
